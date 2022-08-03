@@ -1,4 +1,15 @@
 # directory
 data
 Input_processed_data
+src/logs
+src/datasets
 src/sample_code
+
+# training log
+**/*.log
+
+# pycache
+**/__pycache__/*
+
+# .ipynb_checkpoints
+**/.ipynb_checkpoints/*
