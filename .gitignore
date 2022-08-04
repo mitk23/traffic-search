@@ -2,4 +2,8 @@
 data
 Input_processed_data
 src/logs
+src/datasets
 src/sample_code
+
+# .ipynb_checkpoints
+*/.ipynb_checkpoints/*
