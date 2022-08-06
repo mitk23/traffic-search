@@ -1,4 +1,4 @@
-import datetime
+import time
 
 import torch
 
@@ -21,16 +21,19 @@ class Trainer:
         val_loader,
         n_epochs,
         log_steps=None,
-        max_first_log_steps=None,
+        max_first_log_steps=3,
         max_time=None,
     ):
-        start = datetime.datetime.now()
+        start = time.time()
 
         for epoch in range(1, n_epochs + 1):
+            ## increment epoch
+            self.current_epoch += 1
+            
             ## train
             self.model.train()
             train_loss = 0.0
-            epoch_start = datetime.datetime.now()
+            epoch_start = time.time()
 
             for i_batch, (data, target) in enumerate(train_loader):
                 data, target = data.to(device=self.device), target.to(
@@ -49,12 +52,12 @@ class Trainer:
             train_loss /= len(train_loader)
             self.train_losses.append(train_loss)
 
-            train_time = datetime.datetime.now() - epoch_start
+            train_time = time.time() - epoch_start
 
             ## validate
             self.model.eval()
             val_loss = 0.0
-            epoch_start = datetime.datetime.now()
+            epoch_start = time.time()
 
             with torch.no_grad():
                 for i_batch, (data, target) in enumerate(val_loader):
@@ -68,31 +71,28 @@ class Trainer:
                     val_loss += loss.item()
 
             val_loss /= len(val_loader)
-            self.val_losses.append(val_loss / len(val_loader))
+            self.val_losses.append(val_loss)
 
-            val_time = datetime.datetime.now() - epoch_start
+            val_time = time.time() - epoch_start
 
             ## logging
             log_flag = (self.logger is not None) and (log_steps is not None)
             if log_flag and (
-                (epoch <= max_first_log_steps)
+                (self.current_epoch <= max_first_log_steps)
                 or (self.current_epoch % log_steps == 0)
             ):
-                message = f"Epoch: {self.current_epoch} | Train Loss: {train_loss}, Train Time: {train_time} | Valid Loss: {val_loss}, Valid Time: {val_time}"
+                message = f"Epoch: {self.current_epoch} | Train Loss: {train_loss:.3f}, Train Time: {train_time:.2f} [sec] | Valid Loss: {val_loss:.3f}, Valid Time: {val_time:.2f} [sec]"
                 self.__logging(message)
 
-            ## increment epoch
-            self.current_epoch += 1
-
             ## early stopping
-            if (max_time is not None) and (
-                datetime.datetime.now() - start >= max_time
-            ):
+            if (max_time is not None) and (time.time() - start >= max_time):
                 break
 
         return self.train_losses, self.val_losses
 
     def validate(self, data_loader):
+        ''' 1epochだけ回して性能を評価
+        '''
         self.model.eval()
 
         total_loss = 0.0

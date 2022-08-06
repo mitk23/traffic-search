@@ -12,7 +12,7 @@ class Logger:
         message = self.__get_message(message)
 
         print(message)
-        return None
+        return
 
     def log2file(self, message):
         message = self.__get_message(message)
