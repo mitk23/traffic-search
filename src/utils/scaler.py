@@ -3,16 +3,18 @@ import numpy as np
 
 class STMatrixStandardScaler:
     _direction_col = 4
+    _search_col = [-3, -2]
     _eps = 1e-8
 
-    def __init__(self, by_up_down=False):
+    def __init__(self, by_up_down=False, skip_features=None):
         self.by_up_down = by_up_down
+        self.skip_features = skip_features
 
     def fit(self, X):
         assert (
             X.dim() == 3
         ), "X should be Spatial-Temporal Matrix (Sections x Periods x Features)"
-        S, T, D = X.shape
+        _, T, D = X.shape
 
         if self.by_up_down:
             X_up = X[X[..., self._direction_col] == 0].view(-1, T, D)
@@ -65,4 +67,13 @@ class STMatrixStandardScaler:
 
     def __transform(self, X, mean, std):
         X_norm = (X - mean) / (std + self._eps)
+
+        if self.skip_features is not None:
+            assert isinstance(
+                self.skip_features, (list, tuple)
+            ), "skip features must be List[int] | Tuple[int]"
+            assert isinstance(
+                self.skip_features[0], int
+            ), "skip features must be List[int] | Tuple[int]"
+            X_norm[..., self.skip_features] = X[..., self.skip_features]
         return X_norm

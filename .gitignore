@@ -6,7 +6,7 @@ src/datasets
 src/sample_code
 
 # pycache
-*/__pycache__/*
+**/__pycache__/*
 
 # .ipynb_checkpoints
-*/.ipynb_checkpoints/*
+**/.ipynb_checkpoints/*

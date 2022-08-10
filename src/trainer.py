@@ -4,12 +4,21 @@ import torch
 
 
 class Trainer:
-    def __init__(self, model, optimizer, loss_fn, device=None, logger=None):
+    def __init__(
+        self,
+        model,
+        optimizer,
+        loss_fn,
+        device=None,
+        logger=None,
+        model_path=None,
+    ):
         self.model = model
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.device = device
         self.logger = logger
+        self.model_path = model_path
 
         self.train_losses = []
         self.val_losses = []
@@ -23,13 +32,14 @@ class Trainer:
         log_steps=None,
         max_first_log_steps=3,
         max_time=None,
+        save_epoch_steps=None,
     ):
         start = time.time()
 
         for epoch in range(1, n_epochs + 1):
             ## increment epoch
             self.current_epoch += 1
-            
+
             ## train
             self.model.train()
             train_loss = 0.0
@@ -84,6 +94,13 @@ class Trainer:
                 message = f"Epoch: {self.current_epoch} | Train Loss: {train_loss:.3f}, Train Time: {train_time:.2f} [sec] | Valid Loss: {val_loss:.3f}, Valid Time: {val_time:.2f} [sec]"
                 self.__logging(message)
 
+            ## model saving
+            save_flag = (self.model_path is not None) and (
+                save_epoch_steps is not None
+            )
+            if save_flag and (self.current_epoch % save_epoch_steps == 0):
+                self.save()
+
             ## early stopping
             if (max_time is not None) and (time.time() - start >= max_time):
                 break
@@ -91,8 +108,7 @@ class Trainer:
         return self.train_losses, self.val_losses
 
     def validate(self, data_loader):
-        ''' 1epochだけ回して性能を評価
-        '''
+        """1epochだけ回して性能を評価"""
         self.model.eval()
 
         total_loss = 0.0
@@ -111,6 +127,14 @@ class Trainer:
         return total_loss
 
     def predict(self):
+        return
+
+    def save(self, model_path=None):
+        if model_path is None:
+            model_path = self.model_path
+
+        assert isinstance(model_path, str), "model path must be passed"
+        torch.save(self.model.state_dict(), model_path)
         return
 
     def __logging(self, message):
