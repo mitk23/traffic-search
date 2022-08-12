@@ -42,45 +42,18 @@ class Trainer:
 
             ## train
             self.model.train()
-            train_loss = 0.0
             epoch_start = time.time()
 
-            for i_batch, (data, target) in enumerate(train_loader):
-                data, target = data.to(device=self.device), target.to(
-                    device=self.device
-                )
-
-                out = self.model(data)
-                loss = self.loss_fn(out, target)
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
-                train_loss += loss.item()
-
-            train_loss /= len(train_loader)
+            train_loss = self.__train_epoch(train_loader)
             self.train_losses.append(train_loss)
 
             train_time = time.time() - epoch_start
 
             ## validate
             self.model.eval()
-            val_loss = 0.0
             epoch_start = time.time()
 
-            with torch.no_grad():
-                for i_batch, (data, target) in enumerate(val_loader):
-                    data, target = data.to(device=self.device), target.to(
-                        device=self.device
-                    )
-
-                    out = self.model(data)
-                    loss = self.loss_fn(out, target)
-
-                    val_loss += loss.item()
-
-            val_loss /= len(val_loader)
+            val_loss = self.__valid_epoch(val_loader)
             self.val_losses.append(val_loss)
 
             val_time = time.time() - epoch_start
@@ -107,23 +80,11 @@ class Trainer:
 
         return self.train_losses, self.val_losses
 
-    def validate(self, data_loader):
+    def validate(self, loader):
         """1epochだけ回して性能を評価"""
         self.model.eval()
 
-        total_loss = 0.0
-        with torch.no_grad():
-            for i_batch, (data, target) in enumerate(data_loader):
-                data, target = data.to(device=self.device), target.to(
-                    device=self.device
-                )
-
-                out = self.model(data)
-                loss = self.loss_fn(out, target)
-
-                total_loss += loss.item()
-
-        total_loss /= len(data_loader)
+        total_loss = self.__valid_epoch(loader)
         return total_loss
 
     def predict(self):
@@ -136,6 +97,47 @@ class Trainer:
         assert isinstance(model_path, str), "model path must be passed"
         torch.save(self.model.state_dict(), model_path)
         return
+
+    def __train_epoch(self, loader):
+        train_loss = 0.0
+
+        for i_batch, (data, target) in enumerate(loader):
+            if isinstance(data, (list, tuple)):
+                data = map(lambda x: x.to(device=self.device), data)
+            else:
+                data = data.to(device=self.device)
+            target = target.to(device=self.device)
+
+            out = self.model(data)
+            loss = self.loss_fn(out, target)
+
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            train_loss += loss.item()
+
+        train_loss /= len(loader)
+        return train_loss
+
+    def __valid_epoch(self, loader):
+        valid_loss = 0.0
+
+        with torch.no_grad():
+            for i_batch, (data, target) in enumerate(loader):
+                if isinstance(data, (list, tuple)):
+                    data = map(lambda x: x.to(device=self.device), data)
+                else:
+                    data = data.to(device=self.device)
+                target = target.to(device=self.device)
+
+                out = self.model(data)
+                loss = self.loss_fn(out, target)
+
+                valid_loss += loss.item()
+
+            valid_loss /= len(loader)
+        return valid_loss
 
     def __logging(self, message):
         self.logger.log(message)

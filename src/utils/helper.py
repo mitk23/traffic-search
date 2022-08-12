@@ -11,8 +11,10 @@ def format_stmatrix(df, sec_table, feature_col, target_col):
     T = N // S
 
     # テンソルを準備
-    X = torch.empty((S, T, D), dtype=torch.float32)
-    y = torch.empty((S, T, 1), dtype=torch.float32)
+    # X = torch.empty((S, T, D), dtype=torch.float32)
+    # y = torch.empty((S, T, 1), dtype=torch.float32)
+    X = torch.empty((D, T, S), dtype=torch.float32)
+    y = torch.empty((1, T, S), dtype=torch.float32)
 
     for sec_id, (s_name, e_name, *_) in sec_table.iterrows():
         query = f'start_name == "{s_name}" & end_name == "{e_name}"'
@@ -20,8 +22,8 @@ def format_stmatrix(df, sec_table, feature_col, target_col):
 
         data = df_sec.loc[:, feature_col]
         target = df_sec.loc[:, target_col]
-        X[sec_id] = torch.from_numpy(data.values)
-        y[sec_id, :, 0] = torch.from_numpy(target.values)
+        X[..., sec_id] = torch.from_numpy(data.values).permute(1, 0)
+        y[0, :, sec_id] = torch.from_numpy(target.values)
 
     return X, y
 
@@ -37,7 +39,7 @@ def cyclic_encode(X):
 def train_test_split(X, y, test_ratio):
     assert (
         X.dim() == 3
-    ), "X should be Spatial-Temporal Matrix (Sections x Periods x Features)"
+    ), "X should be Spatial-Temporal Matrix (Features x Periods x Sections)"
     _, T, _ = X.shape
     index_split = int(T * test_ratio)
     X_train, X_test = X[:, :-index_split], X[:, -index_split:]

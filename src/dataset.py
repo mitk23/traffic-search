@@ -2,7 +2,7 @@ import torch
 
 
 class STDataset(torch.utils.data.Dataset):
-    n_up, n_down = 32, 31
+    n_up = 32
 
     def __init__(
         self,
@@ -11,7 +11,7 @@ class STDataset(torch.utils.data.Dataset):
         time_step,
         prediction_horizon=1,
         space_window=None,
-        static_features=[0, 1],
+        static_col=None,
     ):
         """
         Parameters
@@ -24,15 +24,15 @@ class STDataset(torch.utils.data.Dataset):
             いくつ先のstepを予測するか (>= 1 x 15min)
         space_window: Tuple[int]
             前後の区間をいくつ参照するか
-        static_features: List[int] | Tuple[int]
+        static_col: Optional[List[int] | Tuple[int]]
             静的な特徴量の列番号を示す
         """
         assert (
             X.dim() == 3
-        ), "X should be Spatial-Temporal Matrix (Sections x Periods x Features)"
+        ), "X should be Spatial-Temporal Matrix (Features x Periods x Sections)"
         assert (
             y.dim() == 3
-        ), "y should be Spatial-Temporal Matrix (Sections x Periods x 1 (label))"
+        ), "y should be Spatial-Temporal Matrix (1 (label) x Periods x Sections)"
 
         assert time_step > 0, "time step must be >0 (x15min)"
         assert prediction_horizon > 0, "prediction horizon must be >0 (x15min)"
@@ -40,14 +40,7 @@ class STDataset(torch.utils.data.Dataset):
         self.time_step = time_step
         self.space_window = space_window
         self.prediction_horizon = prediction_horizon
-
-        assert isinstance(
-            static_features, (list, tuple)
-        ), "static features must be List[int] or Tuple[int]"
-        assert isinstance(
-            static_features[0], int
-        ), "static features must be List[int] or Tuple[int]"
-        self.static_features = static_features
+        self.static_col = static_col
 
         if space_window is not None:
             assert isinstance(
@@ -71,14 +64,16 @@ class STDataset(torch.utils.data.Dataset):
         return self.features.shape[0]
 
     def __getitem__(self, index):
+        if self.static_col is not None:
+            return (self.features[index], self.static_features[index]), self.labels[index]
         return self.features[index], self.labels[index]
 
     def __sliding_space(self, X):
-        S, T, D = X.shape
+        D, T, S = X.shape
         s_window = self.space_window
         s_len = s_window[1] - s_window[0] + 1
 
-        features = torch.empty((S, T, D, s_len), dtype=torch.float32)
+        features = torch.empty((D, T, S, s_len), dtype=torch.float32)
 
         for sec_id in range(S):
             is_up = sec_id < self.n_up
@@ -97,12 +92,12 @@ class STDataset(torch.utils.data.Dataset):
                 elif (not is_up) and (neighbor_id < self.n_up):
                     neighbor_id = self.n_up
 
-                features[sec_id, ..., i] = X[neighbor_id]
+                features[..., sec_id, i] = X[..., neighbor_id]
 
         return features
 
     def __sliding_window(self, X, y):
-        S, T, *_ = X.shape
+        _, T, S, *_ = X.shape
         t_step = self.time_step
         p_horizon = self.prediction_horizon
 
@@ -111,12 +106,9 @@ class STDataset(torch.utils.data.Dataset):
         for i in range(S):
             # 各区間ごとに過去time step分だけ切り出す
             for t in range(t_step, T - p_horizon + 1):
-                feature = X[i, t - t_step : t + p_horizon - 1]
-                # staticな情報（カレンダー, 区間）は固定する
-                # feature[..., self.static_features] = X[
-                #     i, t + p_horizon - 1, self.static_features
-                # ]
-                label = y[i, t + p_horizon - 1]
+                feature = X[:, t - t_step : t + p_horizon - 1, i]
+                label = y[:, t + p_horizon - 1, i]
+
                 features.append(feature)
                 labels.append(label)
 
@@ -125,4 +117,41 @@ class STDataset(torch.utils.data.Dataset):
         )
         labels = torch.cat(labels, dim=0).view(len(labels), *labels[0].shape)
 
+        if self.static_col is not None:
+            assert isinstance(
+                self.static_col, (list, tuple)
+            ), "static features must be List[int] or Tuple[int]"
+            assert isinstance(
+                self.static_col[0], int
+            ), "static features must be List[int] or Tuple[int]"
+
+            self.static_features = self.__get_static_features(X)
+
         return features, labels
+
+    def __get_static_features(self, X):
+        _, T, S, *_ = X.shape
+        t_step = self.time_step
+        p_horizon = self.prediction_horizon
+
+        static_features = []
+
+        for i in range(S):
+            # 各区間ごとに過去time step分だけ切り出す
+            for t in range(t_step, T - p_horizon + 1):
+                # staticな情報（カレンダー, 区間）は固定する
+                # space_windowが適用されている場合に注意
+                if X.dim() > 3:
+                    W = X.shape[-1]
+                    st_feature = X[
+                        self.static_col, t + p_horizon - 1, i, W // 2
+                    ]
+                else:
+                    st_feature = X[self.static_col, t + p_horizon - 1, i]
+                static_features.append(st_feature)
+
+        static_features = torch.cat(static_features, dim=0).view(
+            len(static_features), *static_features[0].shape
+        )
+
+        return static_features

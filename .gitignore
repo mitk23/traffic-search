@@ -5,6 +5,9 @@ src/logs
 src/datasets
 src/sample_code
 
+# training log
+**/*.log
+
 # pycache
 **/__pycache__/*
 
