@@ -2,6 +2,9 @@ import time
 
 import torch
 
+import config
+from utils.helper import fix_seed
+
 
 class Trainer:
     def __init__(
@@ -11,14 +14,14 @@ class Trainer:
         loss_fn,
         device=None,
         logger=None,
-        model_path=None,
+        model_name=None,
     ):
         self.model = model
         self.optimizer = optimizer
         self.loss_fn = loss_fn
         self.device = device
         self.logger = logger
-        self.model_path = model_path
+        self.model_name = model_name
 
         self.train_losses = []
         self.val_losses = []
@@ -33,9 +36,12 @@ class Trainer:
         max_first_log_steps=3,
         max_time=None,
         save_epoch_steps=None,
+        random_seed=42,
     ):
+        fix_seed(random_seed)
         start = time.time()
 
+        best_loss = 1e20
         for epoch in range(1, n_epochs + 1):
             ## increment epoch
             self.current_epoch += 1
@@ -68,11 +74,14 @@ class Trainer:
                 self.__logging(message)
 
             ## model saving
-            save_flag = (self.model_path is not None) and (
-                save_epoch_steps is not None
-            )
-            if save_flag and (self.current_epoch % save_epoch_steps == 0):
-                self.save()
+            # can_save = (self.model_path is not None) and (
+            #     save_epoch_steps is not None
+            # )
+            # if can_save and (self.current_epoch % save_epoch_steps == 0):
+            #     self.save(self.model_path)
+            if (self.model_name is not None) and (val_loss < best_loss):
+                best_loss = val_loss
+                self.save(self.model_name)
 
             ## early stopping
             if (max_time is not None) and (time.time() - start >= max_time):
@@ -90,11 +99,11 @@ class Trainer:
     def predict(self):
         return
 
-    def save(self, model_path=None):
-        if model_path is None:
-            model_path = self.model_path
-
-        assert isinstance(model_path, str), "model path must be passed"
+    def save(self, model_name=None):
+        assert isinstance(model_name, str), "model name must be passed"
+        model_path = (
+            f"{config.MODEL_DIR}/{model_name}_{self.current_epoch}.pth"
+        )
         torch.save(self.model.state_dict(), model_path)
         return
 

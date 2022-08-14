@@ -1,3 +1,6 @@
+import random
+
+import numpy as np
 import torch
 
 
@@ -46,3 +49,13 @@ def train_test_split(X, y, test_ratio):
     y_train, y_test = y[:, :-index_split], y[:, -index_split:]
 
     return X_train, X_test, y_train, y_test
+
+
+def fix_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    return
