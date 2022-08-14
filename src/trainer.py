@@ -36,7 +36,7 @@ class Trainer:
         max_first_log_steps=3,
         max_time=None,
         save_epoch_steps=None,
-        random_seed=42,
+        random_seed=config.RANDOM_SEED,
     ):
         fix_seed(random_seed)
         start = time.time()

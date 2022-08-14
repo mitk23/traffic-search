@@ -1,5 +1,9 @@
+import sys
+
+sys.path.append("..")
 import random
 
+import config
 import numpy as np
 import torch
 
@@ -51,7 +55,7 @@ def train_test_split(X, y, test_ratio):
     return X_train, X_test, y_train, y_test
 
 
-def fix_seed(seed=42):
+def fix_seed(seed=config.RANDOM_SEED):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
