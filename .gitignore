@@ -5,6 +5,9 @@ src/logs
 src/datasets
 src/sample_code
 
+# trained model
+src/models
+
 # training log
 **/*.log
 

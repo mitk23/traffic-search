@@ -106,7 +106,7 @@ class STDataset(torch.utils.data.Dataset):
         for i in range(S):
             # 各区間ごとに過去time step分だけ切り出す
             for t in range(t_step, T - p_horizon + 1):
-                feature = X[:, t - t_step : t + p_horizon - 1, i]
+                feature = X[:, t - t_step : t, i]
                 label = y[:, t + p_horizon - 1, i]
 
                 features.append(feature)

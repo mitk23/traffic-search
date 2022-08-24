@@ -25,6 +25,7 @@ class Trainer:
 
         self.train_losses = []
         self.val_losses = []
+        self.best_loss = 1e20
         self.current_epoch = 0
 
     def fit(
@@ -41,7 +42,6 @@ class Trainer:
         fix_seed(random_seed)
         start = time.time()
 
-        best_loss = 1e20
         for epoch in range(1, n_epochs + 1):
             ## increment epoch
             self.current_epoch += 1
@@ -79,8 +79,8 @@ class Trainer:
             # )
             # if can_save and (self.current_epoch % save_epoch_steps == 0):
             #     self.save(self.model_path)
-            if (self.model_name is not None) and (val_loss < best_loss):
-                best_loss = val_loss
+            if (self.model_name is not None) and (val_loss < self.best_loss):
+                self.best_loss = val_loss
                 self.save(self.model_name)
 
             ## early stopping
@@ -96,8 +96,18 @@ class Trainer:
         total_loss = self.__valid_epoch(loader)
         return total_loss
 
-    def predict(self):
-        return
+    def predict(self, dataset):
+        self.model.eval()
+
+        with torch.no_grad():
+            data, _ = dataset[:]
+            if isinstance(data, (list, tuple)):
+                data = map(lambda x: x.to(device=self.device), data)
+            else:
+                data = data.to(device=self.device)
+            out = self.model(data)
+
+        return out
 
     def save(self, model_name=None):
         assert isinstance(model_name, str), "model name must be passed"
