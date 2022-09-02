@@ -1,7 +1,7 @@
 # data
 DATASET_DIR = "./datasets"
 TABLES_DIR = f"{DATASET_DIR}/tables"
-MINIDATA_DIR = f"{DATASET_DIR}/mini"
+MINI_DIR = f"{DATASET_DIR}/mini"
 
 # log
 LOG_DIR = "./logs"

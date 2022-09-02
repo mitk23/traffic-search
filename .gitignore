@@ -3,7 +3,9 @@ data
 Input_processed_data
 src/logs
 src/datasets
+src/datasets_1h
 src/sample_code
+src/figs
 
 # trained model
 src/models

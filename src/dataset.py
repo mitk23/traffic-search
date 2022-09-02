@@ -1,4 +1,5 @@
 import torch
+import config
 
 
 class STDataset(torch.utils.data.Dataset):
@@ -106,7 +107,10 @@ class STDataset(torch.utils.data.Dataset):
         for i in range(S):
             # 各区間ごとに過去time step分だけ切り出す
             for t in range(t_step, T - p_horizon + 1):
-                feature = X[:, t - t_step : t, i]
+                f_search = X[config.SEARCH_COL_INDEX, t - t_step + p_horizon : t + p_horizon, i]
+                f_traffic = X[config.TRAFFIC_COL_INDEX, t - t_step : t, i]
+                
+                feature = torch.cat([f_search, f_traffic], dim=0)
                 label = y[:, t + p_horizon - 1, i]
 
                 features.append(feature)
