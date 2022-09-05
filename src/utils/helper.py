@@ -63,3 +63,15 @@ def fix_seed(seed=config.RANDOM_SEED):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
     return
+
+
+def seed_worker(worker_id):
+    '''
+    dataloaderのseedを固定する
+    '''
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
+

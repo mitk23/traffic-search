@@ -139,7 +139,7 @@ class Trainer:
 
             train_loss += loss.item()
 
-        train_loss /= len(loader) * 24
+        train_loss /= len(loader)
         return train_loss
 
     def __valid_epoch(self, loader):
@@ -158,7 +158,7 @@ class Trainer:
 
                 valid_loss += loss.item()
 
-            valid_loss /= len(loader) * 24
+            valid_loss /= len(loader)
         return valid_loss
 
     def __logging(self, message):
