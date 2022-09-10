@@ -39,7 +39,7 @@ class Trainer:
         save_epoch_steps=None,
         random_seed=config.RANDOM_SEED,
     ):
-        fix_seed(random_seed)
+        # fix_seed(random_seed)
         start = time.time()
 
         for epoch in range(1, n_epochs + 1):
