@@ -55,10 +55,11 @@ def train_test_split(X, y, test_ratio):
     return X_train, X_test, y_train, y_test
 
 
-def fix_seed(seed=config.RANDOM_SEED):
+def fix_seed(seed=config.RANDOM_SEED):   
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
@@ -69,9 +70,33 @@ def seed_worker(worker_id):
     '''
     dataloaderのseedを固定する
     '''
-    worker_seed = torch.initial_seed() % 2**32
+    worker_seed = config.RANDOM_SEED % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
 
+def validate(predicted, target):
+    mae_mat = np.abs(predicted - target)
+    mae = mae_mat.mean()
+    
+    mape_mat = np.abs((predicted[target > 0] - target[target > 0]) / target[target > 0])
+    mape = mape_mat.mean()
+    
+    return mae, mape
 
+
+def multistep_validate(predicted, target, steps=[1,3,6,12,18,24]):
+    result = {}
+    
+    for step in steps:
+        t = step - 1
+        mae, mape = validate(predicted[:,t], target[:,t])
+        # print(f'{step} hour ahead: MAE = {mae:.3f}, MAPE = {mape:.3f}')
+        
+        result[f'{step}_ahead'] = {'mae': mae, 'mape': mape}
+    
+    mae, mape = validate(predicted, target)
+    # print(f'Whole: MAE = {mae:.3f}, MAPE = {mape:.3f}')
+        
+    result['whole'] = {'mae': mae, 'mape': mape}
+    return result

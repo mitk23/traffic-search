@@ -13,6 +13,9 @@ src/models
 # training log
 **/*.log
 
+# predicted result
+src/*.pkl
+
 # pycache
 **/__pycache__/*
 

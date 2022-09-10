@@ -24,7 +24,7 @@ SEC_TABLE_SIZE = 63
 RANDOM_SEED = 42
 BATCH_SIZE = 256
 TIME_STEP = 96
-PREDICTION_HORIZON = 1
+PREDICTION_HORIZON = 24
 
 # column num of static features (time id & road id)
 TIME_COL_INDEX = 0
