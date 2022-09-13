@@ -79,10 +79,10 @@ def validate(predicted, target):
     mae_mat = np.abs(predicted - target)
     mae = mae_mat.mean()
     
-    mape_mat = np.abs((predicted[target > 0] - target[target > 0]) / target[target > 0])
-    mape = mape_mat.mean()
+    mse_mat = (predicted - target)**2
+    rmse = np.sqrt(mse_mat.mean())
     
-    return mae, mape
+    return mae, rmse
 
 
 def multistep_validate(predicted, target, steps=[1,3,6,12,18,24]):
@@ -90,13 +90,13 @@ def multistep_validate(predicted, target, steps=[1,3,6,12,18,24]):
     
     for step in steps:
         t = step - 1
-        mae, mape = validate(predicted[:,t], target[:,t])
-        # print(f'{step} hour ahead: MAE = {mae:.3f}, MAPE = {mape:.3f}')
+        mae, rmse = validate(predicted[:,t], target[:,t])
+        # print(f'{step} hour ahead: MAE = {mae:.3f}, RMSE = {rmse:.3f}')
         
-        result[f'{step}_ahead'] = {'mae': mae, 'mape': mape}
+        result[f'{step}_ahead'] = {'mae': mae, 'rmse': rmse}
     
-    mae, mape = validate(predicted, target)
-    # print(f'Whole: MAE = {mae:.3f}, MAPE = {mape:.3f}')
+    mae, rmse = validate(predicted, target)
+    # print(f'Whole: MAE = {mae:.3f}, RMSE = {rmse:.3f}')
         
-    result['whole'] = {'mae': mae, 'mape': mape}
+    result['whole'] = {'mae': mae, 'rmse': rmse}
     return result
