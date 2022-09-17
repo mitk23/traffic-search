@@ -39,7 +39,7 @@ class Trainer:
         save_epoch_steps=None,
         random_seed=config.RANDOM_SEED,
     ):
-        fix_seed(random_seed)
+        # fix_seed(random_seed)
         start = time.time()
 
         for epoch in range(1, n_epochs + 1):
@@ -105,14 +105,17 @@ class Trainer:
                 data = map(lambda x: x.to(device=self.device), data)
             else:
                 data = data.to(device=self.device)
-            out = self.model(data)
+            out = self.model.generate(data)
 
         return out
 
     def save(self, model_name=None):
         assert isinstance(model_name, str), "model name must be passed"
+        # model_path = (
+        #     f"{config.MODEL_DIR}/{model_name}_{self.current_epoch}.pth"
+        # )
         model_path = (
-            f"{config.MODEL_DIR}/{model_name}_{self.current_epoch}.pth"
+            f"{config.MODEL_DIR}/{model_name}_best.pth"
         )
         torch.save(self.model.state_dict(), model_path)
         return
@@ -126,9 +129,12 @@ class Trainer:
             else:
                 data = data.to(device=self.device)
             target = target.to(device=self.device)
+            
+            decoder_xs = torch.full_like(target, -1)
+            decoder_xs[..., 1:] = target[..., :-1]
 
-            out = self.model(data)
-            loss = self.loss_fn(out, target)
+            out = self.model(data, decoder_xs)
+            loss = self.loss_fn(out, target.view(target.shape[0], -1))
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -150,8 +156,8 @@ class Trainer:
                     data = data.to(device=self.device)
                 target = target.to(device=self.device)
 
-                out = self.model(data)
-                loss = self.loss_fn(out, target)
+                predicted = self.model.generate(data)
+                loss = self.loss_fn(predicted, target.view(target.shape[0], -1))
 
                 valid_loss += loss.item()
 
