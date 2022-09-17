@@ -1,5 +1,8 @@
+# config
+Dockerfile
+requirements.txt
+
 # directory
-data
 Input_processed_data
 src/logs
 src/datasets
