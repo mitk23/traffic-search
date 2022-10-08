@@ -5,25 +5,20 @@ requirements.txt
 # directory
 Input_processed_data
 src/logs
+src/results
 src/datasets
 src/datasets_1h
-src/sample_code
-src/figs
+src/jam
 
 # paper drafts
 drafts
-
 # paper figures
 figs
 
 # trained model
 src/models
-
 # training log
 **/*.log
-
-# predicted result
-src/*.pkl
 
 # poetry config (only for local)
 pyproject.toml
