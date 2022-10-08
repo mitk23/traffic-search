@@ -7,3 +7,6 @@ Long-term traffic prediction is required to help traffic operators and travelers
 
 ## Code
 work in progress
+
+## Acknowledgment
+Our research was conducted under a joint research project between the East Nippon Expressway Co., Ltd. (NEXCO East) and the University of Tokyo. The data used in our research, such as online search logs, historical traffic data, and static road information, were provided by NEXCO East. We gratefully acknowledge the kind support provided by the NEXCO East.
