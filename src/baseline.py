@@ -2,7 +2,6 @@ import time
 
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
 from sklearn.svm import SVR
 
 import config
@@ -73,7 +72,7 @@ def main():
     predicted_train, predicted_test = test_baseline(
         SVR(kernel="rbf"), train_X, test_X, train_y, test_y
     )
-    # predicted_train, predicted_test = test_baseline(SVR(kernel='linear'), train_X, test_X, train_y, test_y)
+    predicted_train, predicted_test = test_baseline(RandomForestRegressor(), train_X, test_X, train_y, test_y)
 
 
 if __name__ == "__main__":

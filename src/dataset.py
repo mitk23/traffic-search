@@ -10,6 +10,7 @@ class STDataset(torch.utils.data.Dataset):
         y,
         time_step,
         prediction_horizon=24,
+        prediction_interval=24,
         space_window=None,
     ):
         """
@@ -37,6 +38,7 @@ class STDataset(torch.utils.data.Dataset):
         self.time_step = time_step
         self.space_window = space_window
         self.prediction_horizon = prediction_horizon
+        self.prediction_interval = prediction_interval
 
         if space_window is not None:
             assert isinstance(
@@ -94,6 +96,7 @@ class STDataset(torch.utils.data.Dataset):
         _, T, S, *_ = X.shape
         t_step = self.time_step
         p_horizon = self.prediction_horizon
+        p_interval = self.prediction_interval
 
         trf_t = []
         sr_t = []
@@ -104,7 +107,7 @@ class STDataset(torch.utils.data.Dataset):
 
         for sec_id in range(S):
             # 各区間ごとに過去time step分だけ切り出す
-            for t in range(t_step, T - p_horizon, p_horizon):
+            for t in range(t_step, T - p_horizon + 1, p_interval):
                 f_traffic = X[-1, t - t_step : t, sec_id]
                 f_search = X[-3, t : t + p_horizon, sec_id]
                 f_un_search = X[-2, t : t + 1, sec_id]

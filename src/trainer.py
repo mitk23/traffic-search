@@ -111,8 +111,11 @@ class Trainer:
 
     def save(self, model_name=None):
         assert isinstance(model_name, str), "model name must be passed"
+        # model_path = (
+        #     f"{config.MODEL_DIR}/{model_name}_{self.current_epoch}.pth"
+        # )
         model_path = (
-            f"{config.MODEL_DIR}/{model_name}_{self.current_epoch}.pth"
+            f"{config.MODEL_DIR}/{model_name}_best.pth"
         )
         torch.save(self.model.state_dict(), model_path)
         return
