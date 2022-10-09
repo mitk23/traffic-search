@@ -12,7 +12,7 @@ MODEL_DIR = "./models"
 # features
 TIME_COL = ["datetime_id"]
 ROAD_COL = ["section_id"]
-SEARCH_COL = ["search_15min", "search_unspec_1d"]
+SEARCH_COL = ["search_1h", "search_unspec_1d"]
 TRAFFIC_COL = ["allCars"]
 FEATURE_COL = TIME_COL + ROAD_COL + SEARCH_COL + TRAFFIC_COL
 TARGET_COL = "allCars"
@@ -21,9 +21,9 @@ DT_TABLE_SIZE = 288
 SEC_TABLE_SIZE = 63
 
 # parameters
-RANDOM_SEED = 42
+RANDOM_SEED = 1000
 BATCH_SIZE = 256
-TIME_STEP = 96
+TIME_STEP = 168
 PREDICTION_HORIZON = 24
 
 # column num of static features (time id & road id)

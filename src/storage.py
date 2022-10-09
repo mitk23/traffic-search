@@ -25,3 +25,6 @@ PKL_MINI = './datasets_1h/kannetsu_210402-210531.pkl'
 # CONTEXT TABLES
 DATETIME_TABLE = './datasets/tables/datetime_table.pkl'
 ROAD_TABLE = './datasets/tables/road_table.pkl'
+
+# standard scaler object
+SCALER_PATH = './datasets/training_scaler.pkl'
