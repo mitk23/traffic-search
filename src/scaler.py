@@ -1,20 +1,9 @@
-import torch
-
-
 class STMatrixStandardScaler:
-    _direction_thresh = 32
-    _search_col = [-3, -2]
     _eps = 1e-5
 
-    def __init__(
-        self,
-        road_col=1,
-        search_col=None,
-        traffic_col=None,
-        by_up_down=False,
-        skip_features=None,
-    ):
-        self.by_up_down = by_up_down
+    def __init__(self, skip_features=None):
+        self.mean_ = None
+        self.std_ = None
         self.skip_features = skip_features
 
     def fit(self, X):
@@ -23,33 +12,14 @@ class STMatrixStandardScaler:
         ), "X should be Spatial-Temporal Matrix (Features x Periods x Sections)"
         D, T, _ = X.shape
 
-        if self.by_up_down:
-            X_up = X[..., X[1] < self._direction_thresh].view(D, T, -1)
-            X_down = X[..., X[1] >= self._direction_thresh].view(D, T, -1)
-
-            mean_up, std_up = self.__calc_params(X_up)
-            mean_down, std_down = self.__calc_params(X_down)
-
-            self.mean_ = (mean_up, mean_down)
-            self.std_ = (std_up, std_down)
-        else:
-            mean, std = self.__calc_params(X)
-            self.mean_ = mean
-            self.std_ = std
+        mean, std = self.__calc_params(X)
+        self.mean_ = mean
+        self.std_ = std
 
     def transform(self, X):
         D, T, _ = X.shape
 
-        if self.by_up_down:
-            X_up = X[..., X[1] < self._direction_thresh].view(D, T, -1)
-            X_down = X[..., X[1] >= self._direction_thresh].view(D, T, -1)
-
-            X_up_norm = self.__transform(X_up, self.mean_[0], self.std_[0])
-            X_down_norm = self.__transform(X_down, self.mean_[1], self.std_[1])
-
-            X_norm = torch.cat([X_up_norm, X_down_norm], dim=2)
-        else:
-            X_norm = self.__transform(X, self.mean_, self.std_)
+        X_norm = self.__transform(X, self.mean_, self.std_)
 
         return X_norm
 
