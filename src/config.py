@@ -21,10 +21,11 @@ DT_TABLE_SIZE = 288
 SEC_TABLE_SIZE = 63
 
 # parameters
-RANDOM_SEED = 1000
+RANDOM_SEED = 42
 BATCH_SIZE = 256
 TIME_STEP = 168
 PREDICTION_HORIZON = 24
+SPACE_WINDOW = (-2, 2)
 
 # column num of static features (time id & road id)
 TIME_COL_INDEX = 0

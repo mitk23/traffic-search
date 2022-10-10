@@ -19,8 +19,17 @@ COL_TYPES = {
 }
 
 # PICKLE DATA
-PKL_ALL = './datasets_1h/kannetsu_210402-220531.pkl'
-PKL_MINI = './datasets_1h/kannetsu_210402-210531.pkl'
+DF_ALL = './datasets_1h/kannetsu_210402-220531.pkl'
+DF_ALL_TRAIN = './datasets_1h/kannetsu_210402-220228.pkl'
+DF_ALL_TEST = './datasets_1h/kannetsu_220301-220531.pkl'
+DF_MINI = './datasets_1h/kannetsu_210402-210531.pkl'
+DF_MINI_TRAIN = './datasets_1h/kannetsu_210402-210519.pkl'
+DF_MINI_TEST = './datasets_1h/kannetsu_210520-210531.pkl'
+
+X_TRAIN = './datasets_1h/features_train_norm.pkl'
+X_TEST = './datasets_1h/features_test_norm.pkl'
+Y_TRAIN = './datasets_1h/labels_train.pkl'
+Y_TEST = './datasets_1h/labels_test.pkl'
 
 # CONTEXT TABLES
 DATETIME_TABLE = './datasets/tables/datetime_table.pkl'

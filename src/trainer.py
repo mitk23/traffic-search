@@ -3,7 +3,6 @@ import time
 import torch
 
 import config
-from utils.helper import fix_seed
 
 
 class Trainer:
@@ -43,10 +42,10 @@ class Trainer:
         start = time.time()
 
         for epoch in range(1, n_epochs + 1):
-            ## increment epoch
+            # increment epoch
             self.current_epoch += 1
 
-            ## train
+            # train
             self.model.train()
             epoch_start = time.time()
 
@@ -55,7 +54,7 @@ class Trainer:
 
             train_time = time.time() - epoch_start
 
-            ## validate
+            # validate
             self.model.eval()
             epoch_start = time.time()
 
@@ -64,7 +63,7 @@ class Trainer:
 
             val_time = time.time() - epoch_start
 
-            ## logging
+            # logging
             log_flag = (self.logger is not None) and (log_steps is not None)
             if log_flag and (
                 (self.current_epoch <= max_first_log_steps)
@@ -73,7 +72,7 @@ class Trainer:
                 message = f"Epoch: {self.current_epoch} | Train Loss: {train_loss:.3f}, Train Time: {train_time:.2f} [sec] | Valid Loss: {val_loss:.3f}, Valid Time: {val_time:.2f} [sec]"
                 self.__logging(message)
 
-            ## model saving
+            # model saving
             # can_save = (self.model_path is not None) and (
             #     save_epoch_steps is not None
             # )
@@ -83,7 +82,7 @@ class Trainer:
                 self.best_loss = val_loss
                 self.save(self.model_name)
 
-            ## early stopping
+            # early stopping
             if (max_time is not None) and (time.time() - start >= max_time):
                 break
 
@@ -114,9 +113,7 @@ class Trainer:
         # model_path = (
         #     f"{config.MODEL_DIR}/{model_name}_{self.current_epoch}.pth"
         # )
-        model_path = (
-            f"{config.MODEL_DIR}/{model_name}_best.pth"
-        )
+        model_path = f"{config.MODEL_DIR}/{model_name}_best.pth"
         torch.save(self.model.state_dict(), model_path)
         return
 
@@ -129,7 +126,7 @@ class Trainer:
             else:
                 data = data.to(device=self.device)
             target = target.to(device=self.device)
-            
+
             decoder_xs = torch.full_like(target, -1)
             decoder_xs[..., 1:] = target[..., :-1]
 
@@ -157,7 +154,9 @@ class Trainer:
                 target = target.to(device=self.device)
 
                 predicted = self.model.generate(data)
-                loss = self.loss_fn(predicted, target.view(target.shape[0], -1))
+                loss = self.loss_fn(
+                    predicted, target.view(target.shape[0], -1)
+                )
 
                 valid_loss += loss.item()
 
