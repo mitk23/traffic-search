@@ -1,3 +1,12 @@
+# problem definition
+TIME_STEP = 168
+PREDICTION_HORIZON = 24
+SPACE_WINDOW = (-2, 2)
+
+# data details
+BATCH_SIZE = 256
+
+# network parameters
 TRAFFIC_CONV = 64
 TRAFFIC_HIDDEN = 128
 TRAFFIC_LSTM_LAYERS = 4
@@ -16,4 +25,7 @@ ROAD_EMB = 16
 
 FC_EMB = 32
 
-PREDICTION_HORIZON = 24
+LSTM_DROPOUT = 0
+
+# others
+RANDOM_SEED = 42

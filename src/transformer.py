@@ -3,9 +3,9 @@ import pickle
 import pandas as pd
 import torch
 
-from config import FEATURE_COL, STATIC_COL, TARGET_COL
+from config.config import FEATURE_COL, STATIC_COL, TARGET_COL
+from config.storage import ROAD_TABLE, SCALER_PATH
 from scaler import STMatrixStandardScaler
-from storage import ROAD_TABLE, SCALER_PATH
 
 
 def matrix2tensor(df, road_table, feature_col, target_col):
@@ -67,13 +67,13 @@ def main(args):
     print(f"converted to tensor (feature: {X.shape}, label: {y.shape})")
 
     if args.scale:
-        print('standardize tensor...')
+        print("standardize tensor...")
         training = not args.valid
         scaler_path = args.scaler_path if args.scaler_path else SCALER_PATH
         X_norm = scale(
             X, STATIC_COL, training=training, scaler_path=scaler_path
         )
-        print(f'finished standardization. [scaler] {scaler_path}')
+        print(f"finished standardization. [scaler] {scaler_path}")
         torch.save(X_norm, args.output_feature_path)
     else:
         torch.save(X, args.output_feature_path)

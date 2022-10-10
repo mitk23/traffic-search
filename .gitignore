@@ -9,6 +9,13 @@ src/datasets_1h
 src/jam
 src/old
 
+# preprocess scripts
+src/preprocessing
+src/df_preprocess.py
+
+# experiment notebooks
+src/experiment_*.ipynb
+
 # paper drafts
 drafts
 # paper figures

@@ -2,21 +2,19 @@ import datetime
 
 
 class Logger:
-    def __init__(self, fname=None):
+    def __init__(self, stdout=True, fname=None):
+        self.stdout = stdout
         self.fname = fname
 
     def log(self, message):
-        if self.fname is not None:
+        message = self.__get_message(message)
+
+        if self.stdout:
+            print(message)
+        if self.fname:
             self.log2file(message)
 
-        message = self.__get_message(message)
-
-        print(message)
-        return
-
     def log2file(self, message):
-        message = self.__get_message(message)
-
         with open(self.fname, mode="a", encoding="utf-8") as f:
             print(message, file=f)
 

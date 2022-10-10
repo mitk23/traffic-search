@@ -2,7 +2,7 @@ import itertools
 
 import pandas as pd
 
-from storage import DATETIME_TABLE, ROAD_TABLE
+from config.storage import DATETIME_TABLE, ROAD_TABLE
 
 
 def create_datetime_table():

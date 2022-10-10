@@ -3,10 +3,10 @@ import sys
 sys.path.append("..")
 import random
 
-import config
 import numpy as np
 import pandas as pd
 import torch
+from hparams import RANDOM_SEED
 
 
 def clip_period(df, start, end):
@@ -44,7 +44,7 @@ def train_test_split(X, y, test_ratio):
     return X_train, X_test, y_train, y_test
 
 
-def fix_seed(seed=config.RANDOM_SEED):
+def fix_seed(seed=RANDOM_SEED):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -58,7 +58,7 @@ def seed_worker(worker_id):
     """
     dataloaderのseedを固定する
     """
-    worker_seed = config.RANDOM_SEED % 2**32
+    worker_seed = RANDOM_SEED % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 

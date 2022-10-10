@@ -1,13 +1,7 @@
-# data
-DATASET_DIR = "./datasets"
-TABLES_DIR = f"{DATASET_DIR}/tables"
-MINI_DIR = f"{DATASET_DIR}/mini"
+import torch
 
-# log
-LOG_DIR = "./logs"
-
-# model
-MODEL_DIR = "./models"
+# training and inference device
+GPU_NUMBER = torch.cuda.device_count()
 
 # features
 TIME_COL = ["datetime_id"]
@@ -19,13 +13,6 @@ TARGET_COL = "allCars"
 
 DT_TABLE_SIZE = 288
 SEC_TABLE_SIZE = 63
-
-# parameters
-RANDOM_SEED = 42
-BATCH_SIZE = 256
-TIME_STEP = 168
-PREDICTION_HORIZON = 24
-SPACE_WINDOW = (-2, 2)
 
 # column num of static features (time id & road id)
 TIME_COL_INDEX = 0

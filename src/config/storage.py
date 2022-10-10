@@ -37,3 +37,8 @@ ROAD_TABLE = './datasets/tables/road_table.pkl'
 
 # standard scaler object
 SCALER_PATH = './datasets/training_scaler.pkl'
+
+# log directory
+LOG_DIR = "./logs"
+# trained model directory
+MODEL_DIR = "./models"

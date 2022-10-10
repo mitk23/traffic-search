@@ -2,8 +2,6 @@ import time
 
 import torch
 
-import config
-
 
 class Trainer:
     def __init__(
@@ -13,6 +11,8 @@ class Trainer:
         loss_fn,
         device=None,
         logger=None,
+        log_steps=None,
+        max_first_log_steps=3,
         model_name=None,
     ):
         self.model = model
@@ -20,6 +20,8 @@ class Trainer:
         self.loss_fn = loss_fn
         self.device = device
         self.logger = logger
+        self.log_steps = log_steps
+        self.max_first_log_steps = max_first_log_steps
         self.model_name = model_name
 
         self.train_losses = []
@@ -32,13 +34,8 @@ class Trainer:
         train_loader,
         val_loader,
         n_epochs,
-        log_steps=None,
-        max_first_log_steps=3,
         max_time=None,
-        save_epoch_steps=None,
-        random_seed=config.RANDOM_SEED,
     ):
-        # fix_seed(random_seed)
         start = time.time()
 
         for epoch in range(1, n_epochs + 1):
@@ -60,26 +57,17 @@ class Trainer:
 
             val_loss = self.__valid_epoch(val_loader)
             self.val_losses.append(val_loss)
+            if val_loss < self.best_loss:
+                self.best_loss = val_loss
 
             val_time = time.time() - epoch_start
 
             # logging
-            log_flag = (self.logger is not None) and (log_steps is not None)
-            if log_flag and (
-                (self.current_epoch <= max_first_log_steps)
-                or (self.current_epoch % log_steps == 0)
-            ):
-                message = f"Epoch: {self.current_epoch} | Train Loss: {train_loss:.3f}, Train Time: {train_time:.2f} [sec] | Valid Loss: {val_loss:.3f}, Valid Time: {val_time:.2f} [sec]"
-                self.__logging(message)
+            if (self.logger is not None) and (self.log_steps is not None):
+                self.__logging(train_loss, train_time, val_loss, val_time)
 
             # model saving
-            # can_save = (self.model_path is not None) and (
-            #     save_epoch_steps is not None
-            # )
-            # if can_save and (self.current_epoch % save_epoch_steps == 0):
-            #     self.save(self.model_path)
-            if (self.model_name is not None) and (val_loss < self.best_loss):
-                self.best_loss = val_loss
+            if self.model_name is not None:
                 self.save(self.model_name)
 
             # early stopping
@@ -110,10 +98,8 @@ class Trainer:
 
     def save(self, model_name=None):
         assert isinstance(model_name, str), "model name must be passed"
-        # model_path = (
-        #     f"{config.MODEL_DIR}/{model_name}_{self.current_epoch}.pth"
-        # )
-        model_path = f"{config.MODEL_DIR}/{model_name}_best.pth"
+
+        model_path = f"{model_name}_best.pth"
         torch.save(self.model.state_dict(), model_path)
         return
 
@@ -163,6 +149,13 @@ class Trainer:
             valid_loss /= len(loader)
         return valid_loss
 
-    def __logging(self, message):
+    def __logging(self, train_loss, train_time, valid_loss, valid_time):
+        if (self.current_epoch % self.log_steps > 0) and (
+            self.current_epoch > self.max_first_log_steps
+        ):
+            return
+
+        message = f"Epoch: {self.current_epoch} | Train Loss: {train_loss:.3f}, Train Time: {train_time:.2f} [sec] | Valid Loss: {valid_loss:.3f}, Valid Time: {valid_time:.2f} [sec]"
+
         self.logger.log(message)
         return
