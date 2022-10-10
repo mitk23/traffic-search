@@ -1,7 +1,7 @@
 import torch
 
-from config import BATCH_SIZE, RANDOM_SEED, SPACE_WINDOW, TIME_STEP
 from dataset import STDataset
+from hparams import BATCH_SIZE, RANDOM_SEED, SPACE_WINDOW, TIME_STEP
 from storage import X_TEST, X_TRAIN, Y_TEST, Y_TRAIN
 from utils import helper
 
