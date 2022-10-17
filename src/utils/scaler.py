@@ -6,7 +6,14 @@ class STMatrixStandardScaler:
     _search_col = [-3, -2]
     _eps = 1e-5
 
-    def __init__(self, by_up_down=False, skip_features=None):
+    def __init__(
+        self,
+        road_col=1,
+        search_col=None,
+        traffic_col=None,
+        by_up_down=False,
+        skip_features=None,
+    ):
         self.by_up_down = by_up_down
         self.skip_features = skip_features
 

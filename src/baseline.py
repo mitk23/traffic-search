@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
 
-import config
+from config.hparams import PREDICTION_HORIZON
 from utils.helper import fix_seed
 
 
@@ -14,7 +14,7 @@ def test_baseline(
     X_test,
     y_train,
     y_test,
-    prediction_horizon=config.PREDICTION_HORIZON,
+    prediction_horizon=PREDICTION_HORIZON,
 ):
     fix_seed()
 
@@ -72,7 +72,9 @@ def main():
     predicted_train, predicted_test = test_baseline(
         SVR(kernel="rbf"), train_X, test_X, train_y, test_y
     )
-    predicted_train, predicted_test = test_baseline(RandomForestRegressor(), train_X, test_X, train_y, test_y)
+    predicted_train, predicted_test = test_baseline(
+        RandomForestRegressor(), train_X, test_X, train_y, test_y
+    )
 
 
 if __name__ == "__main__":
