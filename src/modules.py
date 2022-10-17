@@ -2,27 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import config
-
-TRAFFIC_CONV = 64
-TRAFFIC_HIDDEN = 128
-TRAFFIC_LSTM_LAYERS = 4
-TRAFFIC_KERNEL = (7, 5)
-
-SEARCH_CONV = 64
-SEARCH_HIDDEN = 128
-SEARCH_LSTM_LAYERS = 4
-SEARCH_KERNEL = (7, 5)
-
-UNSPEC_SEARCH_HIDDEN = 64
-UNSPEC_SEARCH_KERNEL = 5
-
-DATETIME_EMB = 32
-ROAD_EMB = 16
-
-FC_EMB = 32
-
-PREDICTION_HORIZON = 24
+from config import config, hparams
 
 
 class TrafficSearchEncoder(nn.Module):
@@ -76,8 +56,8 @@ class SearchUnspecEncoder(nn.Module):
 
         self.conv = nn.Conv1d(
             1,
-            UNSPEC_SEARCH_HIDDEN,
-            UNSPEC_SEARCH_KERNEL,
+            hparams.UNSPEC_SEARCH_HIDDEN,
+            hparams.UNSPEC_SEARCH_KERNEL,
             padding_mode="replicate",
         )
         # self.dropout = nn.Dropout(p=0)
@@ -109,20 +89,20 @@ class Encoder(nn.Module):
         self.bidirectional = bidirectional
 
         self.traffic_encoder = TrafficSearchEncoder(
-            TRAFFIC_CONV,
-            TRAFFIC_KERNEL,
-            TRAFFIC_HIDDEN,
-            TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_CONV,
+            hparams.TRAFFIC_KERNEL,
+            hparams.TRAFFIC_HIDDEN,
+            hparams.TRAFFIC_LSTM_LAYERS,
             lstm_dropout=lstm_dropout,
             bidirectional=bidirectional,
         )
 
         if include_search:
             self.search_encoder = TrafficSearchEncoder(
-                SEARCH_CONV,
-                SEARCH_KERNEL,
-                SEARCH_HIDDEN,
-                SEARCH_LSTM_LAYERS,
+                hparams.SEARCH_CONV,
+                hparams.SEARCH_KERNEL,
+                hparams.SEARCH_HIDDEN,
+                hparams.SEARCH_LSTM_LAYERS,
                 lstm_dropout=lstm_dropout,
                 bidirectional=bidirectional,
             )
@@ -180,13 +160,17 @@ class TrafficDecoder(nn.Module):
 
         self.lstm_dropout = lstm_dropout
 
-        self.hid_dim = 2 * TRAFFIC_HIDDEN if bidirectional else TRAFFIC_HIDDEN
+        self.hid_dim = (
+            2 * hparams.TRAFFIC_HIDDEN
+            if bidirectional
+            else hparams.TRAFFIC_HIDDEN
+        )
 
         self.bnorm = nn.BatchNorm1d(1)
         self.lstm = nn.LSTM(
             1,
             self.hid_dim,
-            TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_LSTM_LAYERS,
             dropout=lstm_dropout,
             batch_first=True,
         )
@@ -217,36 +201,44 @@ class AffineDecoder(nn.Module):
         if include_search:
             if bidirectional:
                 self.n_dim = (
-                    2 * TRAFFIC_HIDDEN
-                    + 2 * SEARCH_HIDDEN
-                    + UNSPEC_SEARCH_HIDDEN
-                    + DATETIME_EMB
-                    + ROAD_EMB
+                    2 * hparams.TRAFFIC_HIDDEN
+                    + 2 * hparams.SEARCH_HIDDEN
+                    + hparams.UNSPEC_SEARCH_HIDDEN
+                    + hparams.DATETIME_EMB
+                    + hparams.ROAD_EMB
                 )
             else:
                 self.n_dim = (
-                    TRAFFIC_HIDDEN
-                    + SEARCH_HIDDEN
-                    + UNSPEC_SEARCH_HIDDEN
-                    + DATETIME_EMB
-                    + ROAD_EMB
+                    hparams.TRAFFIC_HIDDEN
+                    + hparams.SEARCH_HIDDEN
+                    + hparams.UNSPEC_SEARCH_HIDDEN
+                    + hparams.DATETIME_EMB
+                    + hparams.ROAD_EMB
                 )
         else:
             if bidirectional:
-                self.n_dim = 2 * TRAFFIC_HIDDEN + DATETIME_EMB + ROAD_EMB
+                self.n_dim = (
+                    2 * hparams.TRAFFIC_HIDDEN
+                    + hparams.DATETIME_EMB
+                    + hparams.ROAD_EMB
+                )
             else:
-                self.n_dim = TRAFFIC_HIDDEN + DATETIME_EMB + ROAD_EMB
+                self.n_dim = (
+                    hparams.TRAFFIC_HIDDEN
+                    + hparams.DATETIME_EMB
+                    + hparams.ROAD_EMB
+                )
 
         self.datetime_embedding = CategoricalEmbedding(
-            config.DT_TABLE_SIZE, DATETIME_EMB
+            config.DT_TABLE_SIZE, hparams.DATETIME_EMB
         )
         self.road_embedding = CategoricalEmbedding(
-            config.SEC_TABLE_SIZE, ROAD_EMB
+            config.SEC_TABLE_SIZE, hparams.ROAD_EMB
         )
         self.emb_dropout = nn.Dropout(p=embedding_dropout)
 
-        self.fc1 = nn.Linear(self.n_dim, FC_EMB)
-        self.fc2 = nn.Linear(FC_EMB, 1)
+        self.fc1 = nn.Linear(self.n_dim, hparams.FC_EMB)
+        self.fc2 = nn.Linear(hparams.FC_EMB, 1)
 
     def forward(self, trf_dec, sr_enc, un_sr_enc, dt, rd):
         # traffic_dec: N x P x H_t
@@ -325,7 +317,7 @@ class Decoder(nn.Module):
 
             generated = []
 
-            for i in range(PREDICTION_HORIZON):
+            for i in range(hparams.PREDICTION_HORIZON):
                 out, state = self.traffic_decoder(out, state)
                 if self.include_search:
                     out = self.affine_decoder(
@@ -351,8 +343,8 @@ class LSTMEncoder(nn.Module):
         self.bidirectional = bidirectional
         self.lstm = nn.LSTM(
             1,
-            TRAFFIC_HIDDEN,
-            TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_HIDDEN,
+            hparams.TRAFFIC_LSTM_LAYERS,
             bidirectional=bidirectional,
             dropout=lstm_dropout,
             batch_first=True,
@@ -392,15 +384,15 @@ class CNNLSTMEncoder(nn.Module):
 
         self.conv = nn.Conv2d(
             1,
-            TRAFFIC_CONV,
-            TRAFFIC_KERNEL,
-            padding=(TRAFFIC_KERNEL[0] // 2, 0),
+            hparams.TRAFFIC_CONV,
+            hparams.TRAFFIC_KERNEL,
+            padding=(hparams.TRAFFIC_KERNEL[0] // 2, 0),
             padding_mode="replicate",
         )
         self.lstm = nn.LSTM(
-            TRAFFIC_CONV,
-            TRAFFIC_HIDDEN,
-            TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_CONV,
+            hparams.TRAFFIC_HIDDEN,
+            hparams.TRAFFIC_LSTM_LAYERS,
             dropout=lstm_dropout,
             bidirectional=bidirectional,
             batch_first=True,
@@ -440,19 +432,23 @@ class LSTMDecoder(nn.Module):
 
         self.lstm_dropout = lstm_dropout
 
-        self.hid_dim = 2 * TRAFFIC_HIDDEN if bidirectional else TRAFFIC_HIDDEN
+        self.hid_dim = (
+            2 * hparams.TRAFFIC_HIDDEN
+            if bidirectional
+            else hparams.TRAFFIC_HIDDEN
+        )
 
         self.bnorm = nn.BatchNorm1d(1)
         self.lstm = nn.LSTM(
             1,
             self.hid_dim,
-            TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_LSTM_LAYERS,
             dropout=lstm_dropout,
             batch_first=True,
         )
 
-        self.fc1 = nn.Linear(self.hid_dim, FC_EMB)
-        self.fc2 = nn.Linear(FC_EMB, 1)
+        self.fc1 = nn.Linear(self.hid_dim, hparams.FC_EMB)
+        self.fc2 = nn.Linear(hparams.FC_EMB, 1)
 
     def forward(self, x, state):
         N, _, P = x.shape
@@ -502,13 +498,17 @@ class LSTMEmbeddingDecoder(nn.Module):
         self.lstm_dropout = lstm_dropout
         self.embedding_dropout = embedding_dropout
 
-        self.hid_dim = 2 * TRAFFIC_HIDDEN if bidirectional else TRAFFIC_HIDDEN
+        self.hid_dim = (
+            2 * hparams.TRAFFIC_HIDDEN
+            if bidirectional
+            else hparams.TRAFFIC_HIDDEN
+        )
 
         self.datetime_embedding = CategoricalEmbedding(
-            config.DT_TABLE_SIZE, DATETIME_EMB
+            config.DT_TABLE_SIZE, hparams.DATETIME_EMB
         )
         self.road_embedding = CategoricalEmbedding(
-            config.SEC_TABLE_SIZE, ROAD_EMB
+            config.SEC_TABLE_SIZE, hparams.ROAD_EMB
         )
         self.emb_dropout = nn.Dropout(p=embedding_dropout)
 
@@ -516,12 +516,15 @@ class LSTMEmbeddingDecoder(nn.Module):
         self.lstm = nn.LSTM(
             1,
             self.hid_dim,
-            TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_LSTM_LAYERS,
             dropout=lstm_dropout,
             batch_first=True,
         )
-        self.fc1 = nn.Linear(self.hid_dim + DATETIME_EMB + ROAD_EMB, FC_EMB)
-        self.fc2 = nn.Linear(FC_EMB, 1)
+        self.fc1 = nn.Linear(
+            self.hid_dim + hparams.DATETIME_EMB + hparams.ROAD_EMB,
+            hparams.FC_EMB,
+        )
+        self.fc2 = nn.Linear(hparams.FC_EMB, 1)
 
     def forward(self, x, state, dt, rd):
         N, _, P = x.shape

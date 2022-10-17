@@ -4,10 +4,10 @@ import torch.optim as optim
 
 import loader
 import models
-from config import GPU_NUMBER
-from hparams import RANDOM_SEED, LSTM_DROPOUT
+from config.config import GPU_NUMBER
+from config.hparams import LSTM_DROPOUT, RANDOM_SEED
+from config.storage import LOG_DIR, MODEL_DIR
 from logger import Logger
-from storage import LOG_DIR, MODEL_DIR
 from trainer import Trainer
 from utils import helper
 
