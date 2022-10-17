@@ -15,6 +15,7 @@ src/df_preprocess.py
 
 # experiment notebooks
 src/experiment_*.ipynb
+src/test.ipynb
 
 # paper drafts
 drafts
