@@ -27,5 +27,8 @@ FC_EMB = 32
 
 LSTM_DROPOUT = 0
 
+# baseline parameters
+ARIMA_ORDER = (1, 1, 0)
+SVR_KERNEL = 'rbf'
 # others
 RANDOM_SEED = 42
