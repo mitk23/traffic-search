@@ -6,7 +6,7 @@ import random
 import numpy as np
 import pandas as pd
 import torch
-from hparams import RANDOM_SEED
+from config.hparams import RANDOM_SEED
 
 
 def clip_period(df, start, end):

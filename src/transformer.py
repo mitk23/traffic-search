@@ -3,7 +3,7 @@ import pickle
 import pandas as pd
 import torch
 
-from config.config import FEATURE_COL, STATIC_COL, TARGET_COL
+from config.config import FEATURE_COL, STATIC_COLS_INDEX, TARGET_COL
 from config.storage import ROAD_TABLE, SCALER_PATH
 from scaler import STMatrixStandardScaler
 
@@ -71,7 +71,7 @@ def main(args):
         training = not args.valid
         scaler_path = args.scaler_path if args.scaler_path else SCALER_PATH
         X_norm = scale(
-            X, STATIC_COL, training=training, scaler_path=scaler_path
+            X, STATIC_COLS_INDEX, training=training, scaler_path=scaler_path
         )
         print(f"finished standardization. [scaler] {scaler_path}")
         torch.save(X_norm, args.output_feature_path)
