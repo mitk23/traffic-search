@@ -1,3 +1,16 @@
 {
-  "jupyter.jupyterServerType": "local"
+  "jupyter.jupyterServerType": "local",
+  "python.formatting.provider": "black",
+  "python.formatting.blackPath": "/usr/local/bin/black",
+  // "python.analysis.typeCheckingMode": "basic",
+  "python.linting.flake8Path": "/usr/local/bin/flake8",
+  "python.linting.flake8Enabled": true,
+  "python.linting.flake8CategorySeverity.E": "Warning",
+  "python.linting.flake8CategorySeverity.F": "Warning",
+  "isort.path": [
+    "/usr/local/bin/isort"
+  ],
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
 }

@@ -7,5 +7,4 @@ RUN DEBIAN_FRONTEND=noninteractive apt install -y curl git python3.9 python3-pip
 RUN python3.9 -m pip install -U wheel setuptools
 
 COPY ./requirements.txt /tmp
-RUN python3.9 -m pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
 RUN python3.9 -m pip install -r /tmp/requirements.txt

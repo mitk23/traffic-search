@@ -1,41 +1,27 @@
-# config
+**/__pycache__/*
+**/.ipynb_checkpoints/*
+**/.DS_Store
+poetry.lock
 
-# directory
+# confidential data
 Input_processed_data
-src/logs
+src/datasets*
+
+# paper drafts
+drafts
+figs
+
+# logs
+**/*.log
+
+# trained models
+src/models
 src/results
-src/datasets
-src/datasets_1h
-src/jam
-src/old
 
 # preprocess scripts
 src/preprocessing
 src/df_preprocess.py
 
-# experiment notebooks
-src/experiment_*.ipynb
-src/test.ipynb
-
-# paper drafts
-drafts
-# paper figures
-figs
-
-# trained model
-src/models
-# training log
-**/*.log
-
-# poetry config (only for local)
-pyproject.toml
-poetry.lock
-
-# pycache
-**/__pycache__/*
-
-# .ipynb_checkpoints
-**/.ipynb_checkpoints/*
-
-# others
-**/.DS_Store
+# notebooks
+**/*.ipynb
+!src/experiment.ipynb
