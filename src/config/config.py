@@ -14,6 +14,12 @@ TARGET_COL = "allCars"
 DT_TABLE_SIZE = 288
 SEC_TABLE_SIZE = 63
 
+N_INBOUND = 32
+N_OUTBOUND = 31
+N_SEGMENT = N_INBOUND + N_OUTBOUND
+
+N_DATETIME_GROUP = 768
+
 # column num of static features (time id & road id)
 TIME_COL_INDEX = 0
 ROAD_COL_INDEX = 1

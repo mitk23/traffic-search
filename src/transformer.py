@@ -70,9 +70,7 @@ def main(args):
         print("standardize tensor...")
         training = not args.valid
         scaler_path = args.scaler_path if args.scaler_path else SCALER_PATH
-        X_norm = scale(
-            X, STATIC_COLS_INDEX, training=training, scaler_path=scaler_path
-        )
+        X_norm = scale(X, STATIC_COLS_INDEX, training=training, scaler_path=scaler_path)
         print(f"finished standardization. [scaler] {scaler_path}")
         torch.save(X_norm, args.output_feature_path)
     else:

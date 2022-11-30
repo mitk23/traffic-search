@@ -1,138 +1,260 @@
+import numpy as np
 import torch
+
+from config import config, hparams
 
 
 class STDataset(torch.utils.data.Dataset):
-    n_up = 32
+    FEATURE_NAMES = [
+        "traffic",
+        "specified_search",
+        "unspecified_search",
+        "weather",
+        "road",
+        "datetime",
+    ]
 
     def __init__(
         self,
-        X,
-        y,
-        time_step,
-        prediction_horizon=24,
-        prediction_interval=24,
-        space_window=None,
+        feature_stmatrix_dict,
+        label_stmatrix,
+        time_step=hparams.TIME_STEP,
+        prediction_horizon=hparams.PREDICTION_HORIZON,
+        prediction_interval=hparams.PREDICTION_INTERVAL,
+        neighbor_window=None,
     ):
-        """
-        Parameters
-        ----------
-        X:
-        y:
-        time_step: int
-            過去を参照する時間幅 (x 15min)
-        prediction_horizon: int
-            いくつ先のstepを予測するか (>= 1 x 15min)
-        space_window: Tuple[int]
-            前後の区間をいくつ参照するか
-        """
-        assert (
-            X.dim() == 3
-        ), "X should be Spatial-Temporal Matrix (Features x Periods x Sections)"
-        assert (
-            y.dim() == 3
-        ), "y should be Spatial-Temporal Matrix (1 (label) x Periods x Sections)"
-
-        assert time_step > 0, "time step must be >0 (x15min)"
-        assert prediction_horizon > 0, "prediction horizon must be >0 (x15min)"
-
         self.time_step = time_step
-        self.space_window = space_window
         self.prediction_horizon = prediction_horizon
         self.prediction_interval = prediction_interval
+        self.neighbor_window = neighbor_window
 
-        if space_window is not None:
-            assert isinstance(
-                space_window, (list, tuple)
-            ), "space window must be List[int] or Tuple[int]"
-            assert isinstance(
-                space_window[0], int
-            ), "space window must be List[int] or Tuple[int]"
+        for f_name in self.FEATURE_NAMES:
             assert (
-                len(space_window) == 2
-            ), "space window must be (-upstream_step, downstream_step)"
-            f = self.__sliding_space(X)
-            features, labels = self.__sliding_window(f, y)
-        else:
-            features, labels = self.__sliding_window(X, y)
+                f_name in feature_stmatrix_dict
+            ), f"feature_stmatrix_dict must contain {self.FEATURE_NAMES}"
 
-        self.features = features
-        self.labels = labels
+        self.feature_stmatrix_dict = feature_stmatrix_dict
+        self.label_stmatrix = label_stmatrix
+
+        slided_feature_dict, slided_labels = self.sliding_spatio_temporal_window(
+            feature_stmatrix_dict, label_stmatrix
+        )
+        assert all(
+            feature.shape[0] == slided_feature_dict["traffic"].shape[0]
+            for feature in slided_feature_dict.values()
+        )
+
+        self.feature_dict = slided_feature_dict
+        self.labels = slided_labels
 
     def __len__(self):
-        return self.features[-1].shape[0]
+        return self.feature_dict["traffic"].shape[0]
 
     def __getitem__(self, index):
-        return tuple(f[index] for f in self.features), self.labels[index]
+        return {k: v[index] for k, v in self.feature_dict.items()}, self.labels[index]
 
-    def __sliding_space(self, X):
-        D, T, S = X.shape
-        s_window = self.space_window
-        s_len = s_window[1] - s_window[0] + 1
-
-        features = torch.empty((D, T, S, s_len), dtype=torch.float32)
-
-        for sec_id in range(S):
-            is_up = sec_id < self.n_up
-            # 各区間の前後区間を切り出す
-            for i, offset in enumerate(range(s_window[0], s_window[1] + 1)):
-                neighbor_id = sec_id + offset
-                # paddingする
-                if neighbor_id < 0:
-                    neighbor_id = 0
-                elif neighbor_id >= S:
-                    neighbor_id = S - 1
-                # 上り区間からはみ出す
-                elif is_up and neighbor_id >= self.n_up:
-                    neighbor_id = self.n_up - 1
-                # 下り区間からはみ出す
-                elif (not is_up) and (neighbor_id < self.n_up):
-                    neighbor_id = self.n_up
-
-                features[..., sec_id, i] = X[..., neighbor_id]
-
-        return features
-
-    def __sliding_window(self, X, y):
-        _, T, S, *_ = X.shape
-        t_step = self.time_step
-        p_horizon = self.prediction_horizon
-        p_interval = self.prediction_interval
-
-        trf_t = []
-        sr_t = []
-        un_sr_t = []
-        dt_t = []
-        road_t = []
-        labels = []
-
-        for sec_id in range(S):
-            # 各区間ごとに過去time step分だけ切り出す
-            for t in range(t_step, T - p_horizon + 1, p_interval):
-                f_traffic = X[-1, t - t_step : t, sec_id]
-                f_search = X[-3, t : t + p_horizon, sec_id]
-                f_un_search = X[-2, t : t + 1, sec_id]
-                # static categorical variables
-                f_dt = X[0, t : t + p_horizon, sec_id]
-                if f_dt.dim() > 1:
-                    f_dt = f_dt[..., 0]
-                f_rd = torch.tensor([sec_id])
-
-                label = y[:, t : t + p_horizon, sec_id]
-
-                trf_t.append(f_traffic)
-                sr_t.append(f_search)
-                un_sr_t.append(f_un_search)
-                dt_t.append(f_dt)
-                road_t.append(f_rd)
-                labels.append(label)
-
-        trf_t = torch.cat(trf_t, dim=0).view(len(trf_t), *trf_t[0].shape)
-        sr_t = torch.cat(sr_t, dim=0).view(len(sr_t), *sr_t[0].shape)
-        un_sr_t = torch.cat(un_sr_t, dim=0).view(
-            len(un_sr_t), *un_sr_t[0].shape
+    def sliding_spatio_temporal_window(self, feature_stmatrix_dict, label_stmatrix):
+        slided_feature_list_dict, slided_label_list = self.__sliding_time_window(
+            feature_stmatrix_dict, label_stmatrix
         )
-        dt_t = torch.cat(dt_t, dim=0).view(len(dt_t), *dt_t[0].shape)
-        road_t = torch.cat(road_t, dim=0).view(len(road_t), *road_t[0].shape)
-        labels = torch.cat(labels, dim=0).view(len(labels), *labels[0].shape)
 
-        return (dt_t, road_t, sr_t, un_sr_t, trf_t), labels
+        slided_traffic_list = slided_feature_list_dict["traffic"]
+        slided_specified_search_list = slided_feature_list_dict["specified_search"]
+        slided_unspecified_search_list = slided_feature_list_dict["unspecified_search"]
+        slided_weather_list = slided_feature_list_dict["weather"]
+        slided_road_list = slided_feature_list_dict["road"]
+        slided_datetime_list = slided_feature_list_dict["datetime"]
+
+        # formatting the dimension of each tensor
+        if self.neighbor_window is None:
+            # N_time x (D x T_hour x S) -> N x T_hour x D
+            traffic = torch.cat(slided_traffic_list, dim=2).transpose(2, 0).contiguous()
+
+            # N_time x (D x P_hour x S) -> N x P_hour x D
+            specified_search = (
+                torch.cat(slided_specified_search_list, dim=2)
+                .transpose(2, 0)
+                .contiguous()
+            )
+
+            # N_time x (D x P_day x S) -> N x P_day x D
+            unspecified_search = (
+                torch.cat(slided_unspecified_search_list, dim=2)
+                .transpose(2, 0)
+                .contiguous()
+            )
+            weather = torch.cat(slided_weather_list, dim=2).transpose(2, 0).contiguous()
+        else:
+            # N_time x (D x T_hour x S) -> N x D x T_hour x W -> N x T_hour x W x D
+            traffic = self.__append_neighbor_feature(slided_traffic_list)
+            traffic = traffic.permute(0, 2, 3, 1).contiguous()
+
+            # N_time x (D x P_hour x S) -> N x D x P_hour x W -> N x P_hour x W x D
+            specified_search = self.__append_neighbor_feature(
+                slided_specified_search_list
+            )
+            specified_search = specified_search.permute(0, 2, 3, 1).contiguous()
+
+            # N_time x (D x P_day x S) -> N x D x P_day x W -> N x P_day x W x D
+            unspecified_search = self.__append_neighbor_feature(
+                slided_unspecified_search_list
+            )
+            unspecified_search = unspecified_search.permute(0, 2, 3, 1).contiguous()
+
+            weather = self.__append_neighbor_feature(slided_weather_list)
+            weather = weather.permute(0, 2, 3, 1).contiguous()
+
+        # N_time x (1 x 1 x S) -> N x 1 x 1
+        road = torch.cat(slided_road_list, dim=2).transpose(2, 0).contiguous()
+        # N_time x (1 x P_hour x 1) -> N_time x (1 x P_hour x S) -> N x P_hour x 1
+        S = slided_label_list[0].shape[-1]
+        slided_datetime_list = [
+            slided_datetime.repeat(1, 1, S) for slided_datetime in slided_datetime_list
+        ]
+        datetime = torch.cat(slided_datetime_list, dim=2).transpose(2, 0).contiguous()
+
+        # N_time x (1 x P_hour x S) -> N x P_hour x 1
+        slided_labels = torch.cat(slided_label_list, dim=2).transpose(2, 0).contiguous()
+
+        slided_feature_dict = {
+            "traffic": traffic,
+            "specified_search": specified_search,
+            "unspecified_search": unspecified_search,
+            "weather": weather,
+            "road": road,
+            "datetime": datetime,
+        }
+        return slided_feature_dict, slided_labels
+
+    def __sliding_time_window(self, feature_stmatrix_dict, label_stmatrix):
+        """
+        cut out tensors to the time step size for traffic prediction
+
+        Parameters
+        ----------
+        feature_stmatrix_dict: Dict[str, torch.Tensor]
+            each feature name mapped to its spatio-temporal matrix
+            size: n_feature D x n_time_length L x n_segment S
+        label_stmatrix: torch.Tensor
+            spatio-temporal matrix of labels
+        """
+        # D x L_hour x S
+        t_traffic = feature_stmatrix_dict["traffic"]
+        t_specified_search = feature_stmatrix_dict["specified_search"]
+        # D x L_day x S
+        t_unspecified_search = feature_stmatrix_dict["unspecified_search"]
+        t_weather = feature_stmatrix_dict["weather"]
+        # 1 x 1 x S (time-static)
+        t_road = feature_stmatrix_dict["road"]
+        # 1 x L_hour x 1
+        t_datetime = feature_stmatrix_dict["datetime"]
+
+        # D x L_hour x S
+        t_label = label_stmatrix
+
+        # List[torch.Tensor(D x T_hour / P_hour / P_day x S)]
+        slided_traffic_list = []
+        slided_specified_search_list = []
+        slided_unspecified_search_list = []
+        slided_weather_list = []
+        slided_datetime_list = []
+        slided_label_list = []
+
+        _, L_hour, S = t_traffic.shape
+
+        for t in range(
+            self.time_step,
+            L_hour - self.prediction_horizon + 1,
+            self.prediction_interval,
+        ):
+            # hourly features / labels
+            slided_traffic = t_traffic[:, t - self.time_step : t, :]
+            slided_traffic_list.append(slided_traffic)
+
+            slided_specified_search = t_specified_search[
+                :, t : t + self.prediction_horizon, :
+            ]
+            slided_specified_search_list.append(slided_specified_search)
+
+            slided_datetime = t_datetime[:, t : t + self.prediction_horizon, :]
+            slided_datetime_list.append(slided_datetime)
+
+            label = t_label[:, t : t + self.prediction_horizon, :]
+            slided_label_list.append(label)
+
+            # daily features
+            t_day = t // 24
+            slided_unspecified_search = t_unspecified_search[
+                :, t_day : t_day + (self.prediction_horizon // 24), :
+            ]
+            slided_unspecified_search_list.append(slided_unspecified_search)
+
+            slided_weather = t_weather[
+                :, t_day : t_day + (self.prediction_horizon // 24), :
+            ]
+            slided_weather_list.append(slided_weather)
+
+        # time-static features
+        N_time_length = len(slided_label_list)
+        slided_road = [t_road for _ in range(N_time_length)]
+
+        slided_feature_list_dict = {
+            "traffic": slided_traffic_list,
+            "specified_search": slided_specified_search_list,
+            "unspecified_search": slided_unspecified_search_list,
+            "weather": slided_weather_list,
+            "road": slided_road,
+            "datetime": slided_datetime_list,
+        }
+        return slided_feature_list_dict, slided_label_list
+
+    def __append_neighbor_feature(self, slided_feature_list):
+        """
+        get the feature of neighbor segments together at certain time step and segment
+
+        Parameters
+        ----------
+        slided_feature_list: List[torch.Tensor]
+            list of feature tensors (size: n_feature D x n_timestep T x n_segment S)
+            each tensor contains feature data about all segments on every time steps
+        neighbor_window: Tuple[int]
+            pair of offsets utilized to calculate the index of neighbor segments
+            e.g.) for i-th segment, neighbor segments are defined to be from (i - neighbor_window[0])-th to (i + neighbor_window[1])-th segment.
+
+        Returns
+        -------
+        st_slided_feature: torch.Tensor
+            tensor size: n_sample N x n_feature D x n_timestep T x n_neighbor_segment W
+        """
+        D, T, S = slided_feature_list[0].shape
+        N_SAMPLE = len(slided_feature_list) * S
+
+        neighbor_iterator = list(
+            range(self.neighbor_window[0], self.neighbor_window[1] + 1)
+        )
+        N_NEIGHBOR = len(neighbor_iterator)
+
+        st_slided_feature = torch.empty(N_SAMPLE, D, T, N_NEIGHBOR)
+
+        i_sample = 0
+        for feature in slided_feature_list:
+            for sec_id in range(S):
+                for i_neighbor, offset in enumerate(neighbor_iterator):
+                    neighbor_sec_id = sec_id + offset
+
+                    if sec_id < config.N_INBOUND:  # 上り区間からはみ出す場合
+                        neighbor_sec_id = np.clip(
+                            neighbor_sec_id, 0, config.N_INBOUND - 1
+                        )
+                    else:  # 下り区間からはみ出す場合
+                        neighbor_sec_id = np.clip(
+                            neighbor_sec_id, config.N_INBOUND, S - 1
+                        )
+
+                    st_slided_feature[i_sample, ..., i_neighbor] = feature[
+                        ..., neighbor_sec_id
+                    ]
+
+                i_sample += 1
+
+        return st_slided_feature

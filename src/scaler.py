@@ -29,7 +29,9 @@ class STMatrixStandardScaler:
         return X_norm
 
     def inverse_transform(self, X):
-        X_origin = X * (self.std_ + self._eps) + self.mean_
+        X_origin = (
+            X * (self.std_[:, None, None] + self._eps) + self.mean_[:, None, None]
+        )
         return X_origin
 
     def get_params(self):
