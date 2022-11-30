@@ -56,8 +56,8 @@ class SearchUnspecEncoder(nn.Module):
 
         self.conv = nn.Conv1d(
             1,
-            hparams.UNSPEC_SEARCH_HIDDEN,
-            hparams.UNSPEC_SEARCH_KERNEL,
+            hparams.UNSPECIFIED_SEARCH_COUNT_HIDDEN,
+            hparams.UNSPECIFIED_SEARCH_COUNT_CONV_SPATIAL_KERNEL,
             padding_mode="replicate",
         )
         # self.dropout = nn.Dropout(p=0)
@@ -89,20 +89,20 @@ class Encoder(nn.Module):
         self.bidirectional = bidirectional
 
         self.traffic_encoder = TrafficSearchEncoder(
-            hparams.TRAFFIC_CONV,
-            hparams.TRAFFIC_KERNEL,
-            hparams.TRAFFIC_HIDDEN,
-            hparams.TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_VOLUME_CONV_DIM,
+            hparams.TRAFFIC_VOLUME_CONV_KERNEL,
+            hparams.TRAFFIC_VOLUME_LSTM_DIM,
+            hparams.TRAFFIC_VOLUME_LSTM_LAYERS,
             lstm_dropout=lstm_dropout,
             bidirectional=bidirectional,
         )
 
         if include_search:
             self.search_encoder = TrafficSearchEncoder(
-                hparams.SEARCH_CONV,
-                hparams.SEARCH_KERNEL,
-                hparams.SEARCH_HIDDEN,
-                hparams.SEARCH_LSTM_LAYERS,
+                hparams.SPECIFIED_SEARCH_COUNT_CONV_DIM,
+                hparams.SPECIFIED_SEARCH_COUNT_CONV_KERNEL,
+                hparams.SPECIFIED_SEARCH_COUNT_LSTM_DIM,
+                hparams.SPECIFIED_SEARCH_COUNT_LSTM_LAYERS,
                 lstm_dropout=lstm_dropout,
                 bidirectional=bidirectional,
             )
@@ -161,16 +161,16 @@ class TrafficDecoder(nn.Module):
         self.lstm_dropout = lstm_dropout
 
         self.hid_dim = (
-            2 * hparams.TRAFFIC_HIDDEN
+            2 * hparams.TRAFFIC_VOLUME_LSTM_DIM
             if bidirectional
-            else hparams.TRAFFIC_HIDDEN
+            else hparams.TRAFFIC_VOLUME_LSTM_DIM
         )
 
         self.bnorm = nn.BatchNorm1d(1)
         self.lstm = nn.LSTM(
             1,
             self.hid_dim,
-            hparams.TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_VOLUME_LSTM_LAYERS,
             dropout=lstm_dropout,
             batch_first=True,
         )
@@ -189,9 +189,7 @@ class TrafficDecoder(nn.Module):
 
 
 class AffineDecoder(nn.Module):
-    def __init__(
-        self, embedding_dropout, include_search=True, bidirectional=True
-    ):
+    def __init__(self, embedding_dropout, include_search=True, bidirectional=True):
         super().__init__()
 
         self.embedding_dropout = embedding_dropout
@@ -201,44 +199,44 @@ class AffineDecoder(nn.Module):
         if include_search:
             if bidirectional:
                 self.n_dim = (
-                    2 * hparams.TRAFFIC_HIDDEN
-                    + 2 * hparams.SEARCH_HIDDEN
-                    + hparams.UNSPEC_SEARCH_HIDDEN
-                    + hparams.DATETIME_EMB
-                    + hparams.ROAD_EMB
+                    2 * hparams.TRAFFIC_VOLUME_LSTM_DIM
+                    + 2 * hparams.SPECIFIED_SEARCH_COUNT_LSTM_DIM
+                    + hparams.UNSPECIFIED_SEARCH_COUNT_HIDDEN
+                    + hparams.DATETIME_N_EMBEDDING
+                    + hparams.ROAD_N_EMBEDDING
                 )
             else:
                 self.n_dim = (
-                    hparams.TRAFFIC_HIDDEN
-                    + hparams.SEARCH_HIDDEN
-                    + hparams.UNSPEC_SEARCH_HIDDEN
-                    + hparams.DATETIME_EMB
-                    + hparams.ROAD_EMB
+                    hparams.TRAFFIC_VOLUME_LSTM_DIM
+                    + hparams.SPECIFIED_SEARCH_COUNT_LSTM_DIM
+                    + hparams.UNSPECIFIED_SEARCH_COUNT_HIDDEN
+                    + hparams.DATETIME_N_EMBEDDING
+                    + hparams.ROAD_N_EMBEDDING
                 )
         else:
             if bidirectional:
                 self.n_dim = (
-                    2 * hparams.TRAFFIC_HIDDEN
-                    + hparams.DATETIME_EMB
-                    + hparams.ROAD_EMB
+                    2 * hparams.TRAFFIC_VOLUME_LSTM_DIM
+                    + hparams.DATETIME_N_EMBEDDING
+                    + hparams.ROAD_N_EMBEDDING
                 )
             else:
                 self.n_dim = (
-                    hparams.TRAFFIC_HIDDEN
-                    + hparams.DATETIME_EMB
-                    + hparams.ROAD_EMB
+                    hparams.TRAFFIC_VOLUME_LSTM_DIM
+                    + hparams.DATETIME_N_EMBEDDING
+                    + hparams.ROAD_N_EMBEDDING
                 )
 
         self.datetime_embedding = CategoricalEmbedding(
-            config.DT_TABLE_SIZE, hparams.DATETIME_EMB
+            config.DT_TABLE_SIZE, hparams.DATETIME_N_EMBEDDING
         )
         self.road_embedding = CategoricalEmbedding(
-            config.SEC_TABLE_SIZE, hparams.ROAD_EMB
+            config.SEC_TABLE_SIZE, hparams.ROAD_N_EMBEDDING
         )
         self.emb_dropout = nn.Dropout(p=embedding_dropout)
 
-        self.fc1 = nn.Linear(self.n_dim, hparams.FC_EMB)
-        self.fc2 = nn.Linear(hparams.FC_EMB, 1)
+        self.fc1 = nn.Linear(self.n_dim, 32)
+        self.fc2 = nn.Linear(32, 1)
 
     def forward(self, trf_dec, sr_enc, un_sr_enc, dt, rd):
         # traffic_dec: N x P x H_t
@@ -308,9 +306,7 @@ class Decoder(nn.Module):
         with torch.no_grad():
             # N x 1 x 1
             N = trf_enc[0].shape[1]
-            out = (
-                torch.tensor(start_value).repeat(N).unsqueeze(-1).unsqueeze(-1)
-            )
+            out = torch.tensor(start_value).repeat(N).unsqueeze(-1).unsqueeze(-1)
             out = out.to(trf_enc[0].device)
 
             state = trf_enc
@@ -343,8 +339,8 @@ class LSTMEncoder(nn.Module):
         self.bidirectional = bidirectional
         self.lstm = nn.LSTM(
             1,
-            hparams.TRAFFIC_HIDDEN,
-            hparams.TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_VOLUME_LSTM_DIM,
+            hparams.TRAFFIC_VOLUME_LSTM_LAYERS,
             bidirectional=bidirectional,
             dropout=lstm_dropout,
             batch_first=True,
@@ -359,18 +355,8 @@ class LSTMEncoder(nn.Module):
         if self.bidirectional:
             # 2*L_t x N x H_t -> L_t x N x 2*H_t
             L2, N, H_t = h.shape
-            h = (
-                h.transpose(0, 1)
-                .reshape(N, L2 // 2, -1)
-                .transpose(0, 1)
-                .contiguous()
-            )
-            c = (
-                h.transpose(0, 1)
-                .reshape(N, L2 // 2, -1)
-                .transpose(0, 1)
-                .contiguous()
-            )
+            h = h.transpose(0, 1).reshape(N, L2 // 2, -1).transpose(0, 1).contiguous()
+            c = h.transpose(0, 1).reshape(N, L2 // 2, -1).transpose(0, 1).contiguous()
 
         return outs, (h, c)
 
@@ -384,15 +370,15 @@ class CNNLSTMEncoder(nn.Module):
 
         self.conv = nn.Conv2d(
             1,
-            hparams.TRAFFIC_CONV,
-            hparams.TRAFFIC_KERNEL,
-            padding=(hparams.TRAFFIC_KERNEL[0] // 2, 0),
+            hparams.TRAFFIC_VOLUME_CONV_DIM,
+            hparams.TRAFFIC_VOLUME_CONV_KERNEL,
+            padding=(hparams.TRAFFIC_VOLUME_CONV_KERNEL[0] // 2, 0),
             padding_mode="replicate",
         )
         self.lstm = nn.LSTM(
-            hparams.TRAFFIC_CONV,
-            hparams.TRAFFIC_HIDDEN,
-            hparams.TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_VOLUME_CONV_DIM,
+            hparams.TRAFFIC_VOLUME_LSTM_DIM,
+            hparams.TRAFFIC_VOLUME_LSTM_LAYERS,
             dropout=lstm_dropout,
             bidirectional=bidirectional,
             batch_first=True,
@@ -410,18 +396,8 @@ class CNNLSTMEncoder(nn.Module):
         if self.bidirectional:
             # 2*L_t x N x H_t -> L_t x N x 2*H_t
             L2, N, H_t = h.shape
-            h = (
-                h.transpose(0, 1)
-                .reshape(N, L2 // 2, -1)
-                .transpose(0, 1)
-                .contiguous()
-            )
-            c = (
-                h.transpose(0, 1)
-                .reshape(N, L2 // 2, -1)
-                .transpose(0, 1)
-                .contiguous()
-            )
+            h = h.transpose(0, 1).reshape(N, L2 // 2, -1).transpose(0, 1).contiguous()
+            c = h.transpose(0, 1).reshape(N, L2 // 2, -1).transpose(0, 1).contiguous()
 
         return outs, (h, c)
 
@@ -433,16 +409,16 @@ class LSTMDecoder(nn.Module):
         self.lstm_dropout = lstm_dropout
 
         self.hid_dim = (
-            2 * hparams.TRAFFIC_HIDDEN
+            2 * hparams.TRAFFIC_VOLUME_LSTM_DIM
             if bidirectional
-            else hparams.TRAFFIC_HIDDEN
+            else hparams.TRAFFIC_VOLUME_LSTM_DIM
         )
 
         self.bnorm = nn.BatchNorm1d(1)
         self.lstm = nn.LSTM(
             1,
             self.hid_dim,
-            hparams.TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_VOLUME_LSTM_LAYERS,
             dropout=lstm_dropout,
             batch_first=True,
         )
@@ -469,9 +445,7 @@ class LSTMDecoder(nn.Module):
         with torch.no_grad():
             # N x 1 x 1
             N = trf_enc[0].shape[1]
-            out = (
-                torch.tensor(start_value).repeat(N).unsqueeze(-1).unsqueeze(-1)
-            )
+            out = torch.tensor(start_value).repeat(N).unsqueeze(-1).unsqueeze(-1)
             out = out.to(trf_enc[0].device)
 
             state = trf_enc
@@ -490,25 +464,23 @@ class LSTMDecoder(nn.Module):
 
 
 class LSTMEmbeddingDecoder(nn.Module):
-    def __init__(
-        self, lstm_dropout, embedding_dropout=0.4, bidirectional=True
-    ):
+    def __init__(self, lstm_dropout, embedding_dropout=0.4, bidirectional=True):
         super().__init__()
 
         self.lstm_dropout = lstm_dropout
         self.embedding_dropout = embedding_dropout
 
         self.hid_dim = (
-            2 * hparams.TRAFFIC_HIDDEN
+            2 * hparams.TRAFFIC_VOLUME_LSTM_DIM
             if bidirectional
-            else hparams.TRAFFIC_HIDDEN
+            else hparams.TRAFFIC_VOLUME_LSTM_DIM
         )
 
         self.datetime_embedding = CategoricalEmbedding(
-            config.DT_TABLE_SIZE, hparams.DATETIME_EMB
+            config.DT_TABLE_SIZE, hparams.DATETIME_N_EMBEDDING
         )
         self.road_embedding = CategoricalEmbedding(
-            config.SEC_TABLE_SIZE, hparams.ROAD_EMB
+            config.SEC_TABLE_SIZE, hparams.ROAD_N_EMBEDDING
         )
         self.emb_dropout = nn.Dropout(p=embedding_dropout)
 
@@ -516,12 +488,12 @@ class LSTMEmbeddingDecoder(nn.Module):
         self.lstm = nn.LSTM(
             1,
             self.hid_dim,
-            hparams.TRAFFIC_LSTM_LAYERS,
+            hparams.TRAFFIC_VOLUME_LSTM_LAYERS,
             dropout=lstm_dropout,
             batch_first=True,
         )
         self.fc1 = nn.Linear(
-            self.hid_dim + hparams.DATETIME_EMB + hparams.ROAD_EMB,
+            self.hid_dim + hparams.DATETIME_N_EMBEDDING + hparams.ROAD_N_EMBEDDING,
             hparams.FC_EMB,
         )
         self.fc2 = nn.Linear(hparams.FC_EMB, 1)
@@ -555,9 +527,7 @@ class LSTMEmbeddingDecoder(nn.Module):
         with torch.no_grad():
             # N x 1 x 1
             N = trf_enc[0].shape[1]
-            out = (
-                torch.tensor(start_value).repeat(N).unsqueeze(-1).unsqueeze(-1)
-            )
+            out = torch.tensor(start_value).repeat(N).unsqueeze(-1).unsqueeze(-1)
             out = out.to(trf_enc[0].device)
 
             state = trf_enc

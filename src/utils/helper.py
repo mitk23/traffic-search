@@ -1,11 +1,12 @@
+import random
 import sys
 
 sys.path.append("..")
-import random
 
 import numpy as np
 import pandas as pd
 import torch
+
 from config.hparams import RANDOM_SEED
 
 
@@ -19,8 +20,7 @@ def clip_period(df, start, end):
     end: str
     """
     return df.loc[
-        (df["datetime"] >= pd.Timestamp(start))
-        & (df["datetime"] < pd.Timestamp(end))
+        (df["datetime"] >= pd.Timestamp(start)) & (df["datetime"] < pd.Timestamp(end))
     ].copy()
 
 
@@ -54,13 +54,16 @@ def fix_seed(seed=RANDOM_SEED):
     return
 
 
-def seed_worker(worker_id):
-    """
-    dataloaderのseedを固定する
-    """
-    worker_seed = RANDOM_SEED % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
+def return_seed_worker(seed=RANDOM_SEED):
+    def seed_worker(worker_id):
+        """
+        dataloaderのseedを固定する
+        """
+        worker_seed = seed % 2**32
+        np.random.seed(worker_seed)
+        random.seed(worker_seed)
+
+    return seed_worker
 
 
 def validate(predicted, target):

@@ -3,6 +3,8 @@
 **/.DS_Store
 poetry.lock
 
+src/tmp
+
 # confidential data
 Input_processed_data
 src/datasets*
@@ -13,6 +15,9 @@ figs
 
 # logs
 **/*.log
+
+# pytorch objects
+**/*.pt
 
 # trained models
 src/models
